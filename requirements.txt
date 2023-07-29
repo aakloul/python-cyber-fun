@@ -1,0 +1,7 @@
+yara-python
+psutil
+scapy
+faker
+requests
+paramiko
+pytest
